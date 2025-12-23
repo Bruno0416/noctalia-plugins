@@ -1,0 +1,19 @@
+{
+    "id": "spotify-media",
+    "name": "Spotify Media",
+    "version": "1.0.0",
+    "minNoctaliaVersion": "3.6.0",
+    "author": "Bruno Valladares",
+    "license": "MIT",
+    "repository": "https://github.com/Bruno0416/noctalia-plugins",
+    "description": "MediaMini Widget fixed to work only with spotify and with some additions like scroll up/down for volume, buttons for previous and next song",
+    "entryPoints": {
+        "barWidget": "BarWidget.qml"
+    },
+    "dependencies": {
+        "plugins": []
+    },
+    "metadata": {
+        "defaultSettings": {}
+    }
+}
