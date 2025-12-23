@@ -1,0 +1,36 @@
+{
+    "id": "workspace-pill",
+    "name": "Workspaces Pill",
+    "version": "1.0.0",
+    "minNoctaliaVersion": "3.6.0",
+    "author": "Bruno Valladares",
+    "license": "MIT",
+    "repository": "https://github.com/Bruno0416/noctalia-plugins",
+    "description": "Workspaces widget that shows all the available workspaces of each monitor.",
+    "entryPoints": {
+        "barWidget": "BarWidget.qml",
+        "settings": "Settings.qml"
+    },
+    "dependencies": {
+        "plugins": []
+    },
+    "metadata": {
+        "defaultSettings": {
+            "monitors": {
+                "DP-1": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "HDMI-A-1": [
+                    6,
+                    7,
+                    8,
+                    9
+                ]
+            }
+        }
+    }
+}
