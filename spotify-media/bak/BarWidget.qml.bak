@@ -3,19 +3,17 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 
-import Quickshell.Services.Mpris 
-import qs.Commons 
-import qs.Services.UI 
-import qs.Widgets 
-import qs.Widgets.AudioSpectrum 
-import qs.Modules.Bar.Extras 
+import Quickshell.Services.Mpris
+import qs.Commons
+import qs.Services.UI
+import qs.Widgets
+import qs.Widgets.AudioSpectrum
+import qs.Modules.Bar.Extras
 import qs.Services.Media
-
 
 Item {
   id: root
 
-  
   property var pluginApi
   property var screen
   property string widgetId: ""
@@ -23,7 +21,6 @@ Item {
   property int sectionWidgetIndex: -1
   property int sectionWidgetsCount: 0
 
-  
   property real scaling: 1.0
 
   // Plugin settings
@@ -33,26 +30,25 @@ Item {
   // Bar orientation
   readonly property bool isVertical: Settings.data.bar.position === "left" || Settings.data.bar.position === "right"
 
-  // Settings 
+  // Settings
   readonly property string hideMode: (ps.hideMode !== undefined) ? String(ps.hideMode) : "hidden" // hidden | idle | transparent
   readonly property bool hideWhenIdle: (ps.hideWhenIdle !== undefined) ? (ps.hideWhenIdle === true) : false
   readonly property bool showAlbumArt: (ps.showAlbumArt !== undefined) ? (ps.showAlbumArt === true) : true
   readonly property bool showArtistFirst: (ps.showArtistFirst !== undefined) ? (ps.showArtistFirst === true) : false
   readonly property bool showVisualizer: true
-  readonly property string visualizerType: "wave" //(ps.visualizerType !== undefined && String(ps.visualizerType) !== "") ? String(ps.visualizerType): "linear" // linear | mirrored | wave | none
+  readonly property string visualizerType: (ps.barVisualizer !== undefined && String(ps.barVisualizer) !== "") ? String(ps.barVisualizer) : "linear" // linear | mirrored | wave | none
   readonly property string scrollingMode: (ps.scrollingMode !== undefined) ? String(ps.scrollingMode) : "hover" // hover | always | never
   readonly property bool showProgressRing: (ps.showProgressRing !== undefined) ? (ps.showProgressRing === true) : true
   readonly property bool useFixedWidth: (ps.useFixedWidth !== undefined) ? (ps.useFixedWidth === true) : false
-  readonly property real maxWidth: (ps.maxWidth !== undefined)
-                                   ? Number(ps.maxWidth)
-                                   : (screen && screen.width ? Math.max(240, screen.width * 0.06) : 240)
   readonly property real volumeStep: (ps.volumeStep !== undefined) ? Number(ps.volumeStep) : 0.02
 
-  
   readonly property int iconSize: Math.round(18 * effectiveScaling)
   readonly property int artSize: Math.round(21 * effectiveScaling)
   readonly property int verticalSize: Math.round((Style.baseWidgetSize - 5) * effectiveScaling)
 
+  readonly property real minWidth: (ps.minWidth !== undefined) ? Number(ps.minWidth) : Math.max(170, iconSize + 60)
+
+  // Player
   property var player: null
 
   function findSpotifyPlayer() {
@@ -73,7 +69,6 @@ Item {
     root.player = findSpotifyPlayer();
   }
 
-  
   Component.onCompleted: {
     updatePlayer();
     syncCava();
@@ -88,10 +83,9 @@ Item {
   readonly property bool isPlaying: hasPlayer ? (root.player.playing === true) : false
 
   readonly property bool spotifyPlaying: hasPlayer && (
-  (player.playbackState !== undefined && player.playbackState === MprisPlaybackState.Playing) ||
-  (player.playing === true)
-    )   
-
+    (player.playbackState !== undefined && player.playbackState === MprisPlaybackState.Playing) ||
+    (player.playing === true)
+  )
 
   readonly property bool shouldHideIdle: ((hideMode === "idle") || (hideWhenIdle === true)) && (isPlaying === false)
   readonly property bool shouldHideEmpty: (hasPlayer === false) && (hideMode === "hidden")
@@ -110,52 +104,86 @@ Item {
     }
   }
 
+  NText {
+    id: titleMetrics
+    visible: false
+    text: root.title
+    applyUiScale: false
+    pointSize: Style.fontSizeS * effectiveScaling
+    font.weight: Style.fontWeightMedium
+  }
 
-  readonly property string cavaComponentId: "bar:spotify-media:" +
-                                           (screen && screen.name ? screen.name : "noscreen") + ":" +
-                                           section + ":" + sectionWidgetIndex
+  readonly property real contentWidth: {
+    if (isHidden) return 0;
+    if (isVertical) return verticalSize;
 
-  readonly property bool needsCava: (showVisualizer === true)
-                                 && (visualizerType !== "")
-                                 && (visualizerType !== "none")
+    
+    var artVisible = hasPlayer && ((showAlbumArt === true) || (showProgressRing === true));
+
+    
+    var s = Style.marginS * effectiveScaling;
+
+    
+    var fixed = iconSize + iconSize  + (artVisible ? artSize : 0);
+
+    
+    
+    var gaps = artVisible ? 3 : 2;
+
+    
+    var textW = 0;
+    if (titleMetrics.contentWidth > 0)
+        textW = titleMetrics.contentWidth + (Style.marginXXS * 2);
+
+    
+    var innerMargins = Style.marginS * effectiveScaling;
+
+    var total = fixed + (gaps * s) + textW + innerMargins;
+
+    if (useFixedWidth)
+        return minWidth;
+
+    
+    return Math.min(total, minWidth);
+    }
 
 
+  // Cava
+  readonly property string cavaComponentId: "bar:spotify-media:" + (screen && screen.name ? screen.name : "noscreen") + ":" + section + ":" + sectionWidgetIndex
+
+  readonly property bool needsCava: (showVisualizer === true) && (visualizerType !== "") && (visualizerType !== "none")
 
   onNeedsCavaChanged: syncCava()
 
-function syncCava() {
-  if (needsCava === true) CavaService.registerComponent(cavaComponentId);
-  else CavaService.unregisterComponent(cavaComponentId);
-}
-
-
-  readonly property var cavaValues: {
-  if (typeof CavaService === "undefined" || CavaService.values === undefined || CavaService.values === null)
-    return [];
-
-  var v = CavaService.values;
-
-  
-  if (Array.isArray(v)) return v;
-
-  
-  if (v && v[cavaComponentId] && Array.isArray(v[cavaComponentId])) return v[cavaComponentId];
-
-  return [];
-}
-
+  function syncCava() {
+    if (needsCava === true) CavaService.registerComponent(cavaComponentId);
+    else CavaService.unregisterComponent(cavaComponentId);
+  }
 
   onIsPlayingChanged: syncCava()
   onIsHiddenChanged: syncCava()
   onVisualizerTypeChanged: syncCava()
   onShowVisualizerChanged: syncCava()
 
-  
   Component.onDestruction: {
     if (typeof CavaService === "undefined") return;
     CavaService.unregisterComponent(cavaComponentId);
   }
 
+  
+  Layout.fillWidth: false
+  Layout.minimumWidth: 0
+  Layout.preferredWidth: contentWidth
+  Layout.maximumWidth: minWidth
+
+  implicitWidth: visible ? contentWidth : 0
+  implicitHeight: visible ? (isVertical ? (isHidden ? 0 : verticalSize) : Style.capsuleHeight) : 0
+  visible: (!shouldHideIdle) && (hideMode !== "hidden" || opacity > 0)
+  opacity: isHidden ? 0.0 : ((hideMode === "transparent" && !hasPlayer) ? 0.0 : 1.0)
+
+  Behavior on opacity { NumberAnimation { duration: Style.animationNormal; easing.type: Easing.InOutCubic } }
+  Behavior on implicitWidth { NumberAnimation { duration: Style.animationNormal; easing.type: Easing.InOutCubic } }
+  Behavior on implicitHeight { NumberAnimation { duration: Style.animationNormal; easing.type: Easing.InOutCubic } }
 
   NPopupContextMenu {
     id: contextMenu
@@ -191,42 +219,6 @@ function syncCava() {
     }
   }
 
-  readonly property real contentWidth: {
-    if (useFixedWidth === true) return maxWidth;
-
-    var iconWidth = 0;
-    if (!hasPlayer || ((showAlbumArt === false) && (showProgressRing === false))) iconWidth = iconSize;
-    else iconWidth = artSize;
-
-    var textWidth = 0;
-    if (titleMetrics.contentWidth > 0) {
-      textWidth = (Style.marginS * effectiveScaling) + titleMetrics.contentWidth + (Style.marginXXS * 2);
-    }
-
-    var margins = isVertical ? 0 : (Style.marginS * effectiveScaling * 2);
-    var total = iconWidth + textWidth + margins;
-    return hasPlayer ? Math.min(total, maxWidth) : total;
-  }
-
-  implicitWidth: visible ? (isVertical ? (isHidden ? 0 : verticalSize) : (isHidden ? 0 : contentWidth)) : 0
-  implicitHeight: visible ? (isVertical ? (isHidden ? 0 : verticalSize) : Style.capsuleHeight) : 0
-  visible: (!shouldHideIdle) && (hideMode !== "hidden" || opacity > 0)
-  opacity: isHidden ? 0.0 : ((hideMode === "transparent" && !hasPlayer) ? 0.0 : 1.0)
-
-  Behavior on opacity { NumberAnimation { duration: Style.animationNormal; easing.type: Easing.InOutCubic } }
-  Behavior on implicitWidth { NumberAnimation { duration: Style.animationNormal; easing.type: Easing.InOutCubic } }
-  Behavior on implicitHeight { NumberAnimation { duration: Style.animationNormal; easing.type: Easing.InOutCubic } }
-
-  
-  NText {
-    id: titleMetrics
-    visible: false
-    text: root.title
-    applyUiScale: false
-    pointSize: Style.fontSizeS * effectiveScaling
-    font.weight: Style.fontWeightMedium
-  }
-
   // --------------------------
   // Main container
   // --------------------------
@@ -235,7 +227,7 @@ function syncCava() {
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
 
-    width: isVertical ? (isHidden ? 0 : verticalSize) : (isHidden ? 0 : contentWidth)
+    width: isVertical ? (isHidden ? 0 : verticalSize) : contentWidth
     height: isVertical ? (isHidden ? 0 : verticalSize) : Style.capsuleHeight
     radius: Style.radiusM
     color: Style.capsuleColor
@@ -298,7 +290,7 @@ function syncCava() {
           }
         }
 
-        // Album art
+        // Album art / ring
         Item {
           visible: hasPlayer && ((showAlbumArt === true) || (showProgressRing === true))
           Layout.preferredWidth: visible ? artSize : 0
@@ -322,8 +314,8 @@ function syncCava() {
               visible: (showAlbumArt === true) && hasPlayer
               anchors.fill: parent
               radius: width / 2
-              imagePath: hasPlayer ? root.player.trackArtUrl : ""
-              fallbackIcon: isPlaying ? "media-pause" : "media-play"
+              imagePath: (hasPlayer && spotifyPlaying) ? root.player.trackArtUrl : ""
+              fallbackIcon: "media-pause"
               fallbackIconSize: (showProgressRing === true) ? 10 : 12
               borderWidth: 0
             }
@@ -368,7 +360,7 @@ function syncCava() {
         }
       }
 
-      // Vertical layout 
+      // Vertical layout
       Item {
         visible: isVertical
         anchors.centerIn: parent
@@ -390,8 +382,8 @@ function syncCava() {
           visible: (showAlbumArt === true) && hasPlayer
           anchors.fill: parent
           radius: width / 2
-          imagePath: hasPlayer ? root.player.trackArtUrl : ""
-          fallbackIcon: isPlaying ? "media-pause" : "media-play"
+          imagePath: (hasPlayer && spotifyPlaying) ? root.player.trackArtUrl : ""
+          fallbackIcon: "media-pause"
           fallbackIconSize: 12
           borderWidth: 0
         }
@@ -405,18 +397,14 @@ function syncCava() {
         }
       }
 
-      
       MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         cursorShape: hasPlayer ? Qt.PointingHandCursor : Qt.ArrowCursor
 
-        
         onWheel: function(wheel) {
           if (!root.player) return;
-
-          
           if (root.player.canControl !== true) return;
           if (root.player.volumeSupported !== true) return;
           if (root.player.volume === undefined) return;
@@ -431,17 +419,11 @@ function syncCava() {
         }
 
         onClicked: function(mouse) {
-          if (mouse.button === Qt.LeftButton && hasPlayer && (player.canTogglePlaying === true)) {
+          if (mouse.button === Qt.LeftButton && hasPlayer && player.canTogglePlaying) {
             player.togglePlaying();
           } else if (mouse.button === Qt.RightButton) {
             TooltipService.hide();
-            var popupWindow = PanelService.getPopupMenuWindow(screen);
-            if (popupWindow) {
-              popupWindow.showContextMenu(contextMenu);
-              contextMenu.openAtItem(container, screen);
-            }
-          } else if (mouse.button === Qt.MiddleButton && hasPlayer && (player.canGoPrevious === true)) {
-            player.previous();
+            if (pluginApi) pluginApi.openPanel(root.screen);
           }
         }
 
@@ -450,6 +432,7 @@ function syncCava() {
             TooltipService.show(root, root.title, BarService.getTooltipDirection());
           }
         }
+
         onExited: TooltipService.hide()
       }
     }
@@ -523,7 +506,6 @@ function syncCava() {
     }
   }
 
-  
   component ScrollingText: Item {
     id: scrollText
 

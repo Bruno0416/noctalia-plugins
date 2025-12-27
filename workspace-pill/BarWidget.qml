@@ -3,38 +3,41 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 
-import qs.Commons 1.0
-import qs.Services.Compositor 1.0
+import qs.Commons 
+import qs.Services.Compositor 
 
 Rectangle {
   id: root
-
   
   property var pluginApi
   property var screen
   property string widgetId
   property string section
 
+  function s(key, fallback) {
+    return (pluginApi && pluginApi.pluginSettings && pluginApi.pluginSettings[key] !== undefined)
+      ? pluginApi.pluginSettings[key]
+      : fallback
+  }
+
+  readonly property bool showIndex: s("showIndex", false)
+  readonly property real padding: s("padding", 4)
+  readonly property real activeWidth: s("activeWidth", 35)
+
   
   visible: true
 
   
-  readonly property string barPosition: (Settings && Settings.data && Settings.data.bar && Settings.data.bar.position)
-                                    ? Settings.data.bar.position
-                                    : "top"
+  readonly property string barPosition: (Settings && Settings.data && Settings.data.bar && Settings.data.bar.position) ? Settings.data.bar.position : "top"
   readonly property bool isVertical: barPosition === "left" || barPosition === "right"
 
   readonly property string screenName: (screen && screen.name) ? screen.name : ""
 
       
-  readonly property bool showCapsule: (Settings && Settings.data && Settings.data.bar && Settings.data.bar.showCapsule !== undefined)
-                                    ? Settings.data.bar.showCapsule
-                                    : true
+  readonly property bool showCapsule: (Settings && Settings.data && Settings.data.bar && Settings.data.bar.showCapsule !== undefined)? Settings.data.bar.showCapsule: true
 
     
-  readonly property bool showOutline: (Settings && Settings.data && Settings.data.bar && Settings.data.bar.showOutline !== undefined)
-                                    ? Settings.data.bar.showOutline
-                                    : true
+  readonly property bool showOutline: (Settings && Settings.data && Settings.data.bar && Settings.data.bar.showOutline !== undefined)? Settings.data.bar.showOutline: true
 
 
   
@@ -116,7 +119,7 @@ Rectangle {
   
   Loader {
     id: contentLoader
-    anchors.centerIn: parent
+    anchors.centerIn: parent 
     sourceComponent: root.isVertical ? verticalContent : horizontalContent
   }
 
@@ -124,7 +127,7 @@ Rectangle {
     id: horizontalContent
     Row {
       id: row
-      spacing: Style.marginS
+      spacing: Style.marginS / 1.5
 
       Repeater {
         model: root.localIds
@@ -135,20 +138,23 @@ Rectangle {
           readonly property bool isFocused: wsObj ? (wsObj.isFocused === true) : false
           readonly property bool isOccupied: wsObj ? (wsObj.isOccupied === true) : false
 
-          height: Style.capsuleHeight - Style.marginS * 2
+          height: Style.capsuleHeight - root.padding * 2
           radius: height / 2
 
           
-          width: isFocused ? height*3 : height
-          Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+          width: isFocused ? root.activeWidth : height
+          Behavior on width { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
 
           
           color: isFocused ? Color.mPrimary :  Qt.alpha(Color.mSecondary, 0.55)
-          Behavior on color { ColorAnimation { duration: 160 } }
+          Behavior on color { ColorAnimation { duration: 280; easing.type: Easing.OutCubic } }
+          
 
           border.color: Color.mOutline
           border.width: 1
           opacity: isFocused ? 1.0 : 0.90
+
+        
 
           MouseArea {
             anchors.fill: parent
@@ -156,11 +162,15 @@ Rectangle {
             hoverEnabled: true
 
             
-            onClicked: {
-              if (wsObj) {
-                CompositorService.switchToWorkspace(wsObj)
-              } else {
-                Hyprland.dispatch("workspace " + wsId)
+            onClicked: mouse => {
+              if (mouse.button === Qt.LeftButton){
+                 if (wsObj) {
+                  CompositorService.switchToWorkspace(wsObj)
+                } else {
+                  Hyprland.dispatch("workspace " + wsId)
+                }
+              } else if (mouse.button === Qt.RightButon){
+                // TODO: Agregar dropdow para configuracion
               }
             }
 
@@ -219,20 +229,17 @@ Rectangle {
     }
   }
 
-  
-  implicitWidth: isVertical
-                 ? Style.capsuleHeight
-                 : ((contentLoader.item ? contentLoader.item.implicitWidth : 0) + Style.marginM * 2)
-  implicitHeight: isVertical
-                  ? ((contentLoader.item ? contentLoader.item.implicitHeight : 0) + Style.marginM * 2)
-                  : Style.capsuleHeight
+
+
+  implicitWidth: isVertical ? Style.capsuleHeight : ((contentLoader.item ? contentLoader.item.implicitWidth : 0) + root.padding * 2)
+  implicitHeight: isVertical ? ((contentLoader.item ? contentLoader.item.implicitHeight : 0) + root.padding  * 2) : Style.capsuleHeight
 
   radius: height / 2
 
   
     
     color: showCapsule
-        ? Color.mSurface
+        ? Style.capsuleColor
         : Color.transparent
 
     

@@ -1,66 +1,75 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Layouts
+import qs.Commons
+import qs.Widgets
 
-Item {
+ColumnLayout {
   id: root
 
-  
-  required property var pluginApi
+  property var pluginApi
 
-  
-  function getSettings() {
-    return pluginApi.pluginSettings || {}
+  // Local state variables
+  property bool showIndex: pluginApi?.pluginSettings?.showIndex || false
+  property real padding: pluginApi?.pluginSettings?.padding || 4
+  property real activeWidth: pluginApi?.pluginSettings?.activeWidth || 35
+
+  spacing: Style.marginL
+
+  Component.onCompleted: {
+    Logger.i("UpdateCount", "Settings UI loaded");
   }
 
-  function updateSettings(newSettings) {
-    pluginApi.updateSettings(newSettings)
-  }
 
-  Column {
-    anchors.fill: parent
-    anchors.margins: 16
-    spacing: 12
 
-    Text {
-      text: "Monitors workspaces"
-      font.pixelSize: 16
+  ColumnLayout {
+    Layout.fillWidth: true
+    spacing: Style.marginS
+
+    // Show index?
+    // NToggle {
+    //   Layout.fillWidth: true
+    //   label: "Show Index"
+    //   description: "Turn this feature on or off"
+    //   checked: root.showIndex
+    //   onCheckedChanged: root.showIndex = checked
+    // }
+
+    // Padding section
+    NLabel {
+      label: "Padding"
+      description: "Widget Padding"
     }
 
-    Repeater {
-      model: Object.keys(getSettings().monitors || {})
-
-      delegate: Row {
-        spacing: 8
-
-        property string monitorName: modelData
-        property var currentList: (getSettings().monitors || {})[monitorName] || []
-
-        Text {
-          text: monitorName
-          width: 100
-        }
-
-        TextField {
-          id: wsField
-          text: currentList.join(", ")
-          placeholderText: "1, 2, 3, 4, 5"
-          width: 200
-
-          onEditingFinished: {
-            const parts = text.split(",").map(function(p) {
-              return parseInt(p.trim())
-            }).filter(function(n) { return !isNaN(n) })
-
-            const settings = getSettings()
-            if (!settings.monitors)
-              settings.monitors = {}
-
-            settings.monitors[monitorName] = parts
-            updateSettings(settings)
-          }
-        }
-      }
+    NSlider {
+      Layout.fillWidth: true
+      from: 4
+      to: 10
+      value: root.padding
+      onValueChanged: root.padding = value
     }
 
+    // Active Width section
+    NLabel {
+      label: "Active Width"
+      description: "Active widget width"
+    }
+
+    NSlider {
+      Layout.fillWidth: true
+      from: Style.capsuleHeight - Style.marginS * 2
+      to: 100
+      value: root.activeWidth
+      onValueChanged: root.activeWidth = value
+    }
   }
+
+
+
+  
+    function saveSettings() {
+      pluginApi.pluginSettings.showIndex = root.showIndex
+      pluginApi.pluginSettings.padding = root.padding
+      pluginApi.pluginSettings.activeWidth = root.activeWidth
+      pluginApi.saveSettings()
+    }
 }

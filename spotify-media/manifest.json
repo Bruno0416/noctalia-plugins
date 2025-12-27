@@ -8,7 +8,9 @@
     "repository": "https://github.com/Bruno0416/noctalia-plugins",
     "description": "MediaMini Widget fixed to work only with spotify and with some additions like scroll up/down for volume, buttons for previous and next song",
     "entryPoints": {
-        "barWidget": "BarWidget.qml"
+        "barWidget": "BarWidget.qml",
+        "panel": "Panel.qml",
+        "settings": "Settings.qml"
     },
     "dependencies": {
         "plugins": []
